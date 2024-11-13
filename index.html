@@ -33,8 +33,10 @@ class DisplaySurface
 	viewMatrix(eye)
 	{
 		// to be written by you!
+        var displayCenter = this.origin.clone().add(this.u.clone().multiplyScalar(0.5)).add(this.v.clone().multiplyScalar(0.5));
+        var uvProjection = new THREE.Vector3().addVectors(eye.clone().projectOnVector(this.u), eye.clone().projectOnVector(this.v));
+		var target = new THREE.Vector3().addVectors(displayCenter, uvProjection);
 
-		var target = new THREE.Vector3(0,0,0);	
 		var upVector = new THREE.Vector3(0,1,0);	
 		var mat = new THREE.Matrix4();
 		mat = mat.lookAt(eye, target, upVector); // this lookAt version creates only a rotation matrix
@@ -45,8 +47,7 @@ class DisplaySurface
 	
     projectionMatrix(eye, znear, zfar)
     {
-		// to be written by you!
-
+		
         var left = -1;
         var right = 1;
         var bottom = -1;
