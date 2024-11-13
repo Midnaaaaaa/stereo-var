@@ -32,10 +32,12 @@ class DisplaySurface
 
 	viewMatrix(eye)
 	{
-		// to be written by you!
-        var displayCenter = this.origin.clone().add(this.u.clone().multiplyScalar(0.5)).add(this.v.clone().multiplyScalar(0.5));
-        var uvProjection = new THREE.Vector3().addVectors(eye.clone().projectOnVector(this.u), eye.clone().projectOnVector(this.v));
-		var target = new THREE.Vector3().addVectors(displayCenter, uvProjection);
+        // var displayCenter = this.origin.clone().add(this.u.clone().multiplyScalar(0.5)).add(this.v.clone().multiplyScalar(0.5));        
+        // var uvProjection = new THREE.Vector3().addVectors(eye.clone().projectOnVector(this.u), eye.clone().projectOnVector(this.v)); // pos proyectado en u y v
+		// var target = new THREE.Vector3().addVectors(displayCenter, uvProjection); 
+        
+        var target = new THREE.Vector3().crossVectors(this.v, this.u).normalize();
+        target.add(eye);
 
 		var upVector = new THREE.Vector3(0,1,0);	
 		var mat = new THREE.Matrix4();
@@ -47,11 +49,23 @@ class DisplaySurface
 	
     projectionMatrix(eye, znear, zfar)
     {
+        var w1 = -new THREE.Vector3().addVectors(eye.clone().projectOnVector(this.u), this.u.clone().multiplyScalar(0.5)).length(); //left far
+        var w2 = this.u.length() + w1; //right far
+
+        var l1 = (this.origin.clone().add(this.u.clone().multiplyScalar(0.5)).add(this.v.clone().multiplyScalar(0.5))).length();
+
+        var h1 = -new THREE.Vector3().addVectors(eye.clone().projectOnVector(this.v), this.v.clone().multiplyScalar(0.5)).length(); //bot far
+        var h2 = this.v.length() + h1; //right far //top far
 		
-        var left = -1;
-        var right = 1;
-        var bottom = -1;
-        var top = 1;
+        
+        var left = (znear * w1) / l1;
+        console.log(left);
+        var right = (znear * w2) / l1;
+        console.log(right);
+        var bottom = (znear * h1) / l1;
+        console.log(bottom);
+        var top = (znear * h2) / l1;
+        console.log(top);
         return new THREE.Matrix4().makePerspective(left, right, top, bottom, znear, zfar);
     }
 }
