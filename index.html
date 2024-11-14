@@ -22,6 +22,9 @@ for alternative installations -->
 <script>
 class DisplaySurface 
 {
+    /**
+     * 
+     */
     constructor(name, origin, u_vector, v_vector) 
     {
         this.name = name;
@@ -49,6 +52,32 @@ class DisplaySurface
 	
     projectionMatrix(eye, znear, zfar)
     {
+        let displayWidth = this.origin.x + this.u;
+        let displayHeight = this.origin.y + this.v;
+
+        let lb = eye.clone().sub(this.origin);
+        let rb = eye.clone().sub(this.origin.clone().add(this.u));
+        let lt = eye.clone().sub(this.origin.clone().add(this.v));
+
+        let widthLeft = lb.clone().projectOnVector(this.u).length();
+        let widthRight = rb.clone().projectOnVector(this.u).length();
+
+        let heightTop = lt.clone().projectOnVector(this.v).length();
+        let heightBottom = lb.clone().projectOnVector(this.v).length();
+
+        let midLeft = eye.clone().sub(this.origin.clone().add(this.v.clone().multiplyScalar(0.5)));
+        let hip = midLeft.length();
+        let c = midLeft.clone().projectOnVector(this.u).length();
+        let dist = Math.sqrt(hip*hip-c*c);
+
+        let left = -(znear * widthLeft) / dist;
+        let right = (znear * widthRight) / dist;
+        let bottom = -(znear * heightBottom) / dist;
+        let top = (znear * heightTop) / dist;
+
+
+
+        /*
         var w1 = -new THREE.Vector3().addVectors(eye.clone().projectOnVector(this.u), this.u.clone().multiplyScalar(0.5)).length(); //left far
         var w2 = this.u.length() + w1; //right far
 
@@ -66,6 +95,7 @@ class DisplaySurface
         console.log(bottom);
         var top = (znear * h2) / l1;
         console.log(top);
+        */
         return new THREE.Matrix4().makePerspective(left, right, top, bottom, znear, zfar);
     }
 }
@@ -111,6 +141,11 @@ function createEyeScene()
     // eye positions relative to the head
     var eyeL = new THREE.Vector3( - IPD/2, 10, -6);
     var eyeR = new THREE.Vector3( + IPD/2, 10, -6);
+
+    // eyeCenter = new THREE.Vector3(0, 0, 0);
+    // // eye positions relative to the head
+    // var eyeL = new THREE.Vector3( 0, 0, 0);
+    // var eyeR = new THREE.Vector3( 0, 0, 0);
     
     eyeScene = new THREE.Scene();
 
