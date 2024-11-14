@@ -22,9 +22,6 @@ for alternative installations -->
 <script>
 class DisplaySurface 
 {
-    /**
-     * 
-     */
     constructor(name, origin, u_vector, v_vector) 
     {
         this.name = name;
@@ -52,9 +49,6 @@ class DisplaySurface
 	
     projectionMatrix(eye, znear, zfar)
     {
-        let displayWidth = this.origin.x + this.u;
-        let displayHeight = this.origin.y + this.v;
-
         let lb = eye.clone().sub(this.origin);
         let rb = eye.clone().sub(this.origin.clone().add(this.u));
         let lt = eye.clone().sub(this.origin.clone().add(this.v));
@@ -287,7 +281,18 @@ function createDisplaySurfaces()
         new THREE.Vector3(0.0, 300.0,   0.0));
     displaySurfaces.push(leftScreen);
 	
-	// to be completed by you
+    // RIGHT SCREEN
+    var rightScreen = new DisplaySurface("Right",
+        new THREE.Vector3(150.0, -150.0, -150.0), 
+        new THREE.Vector3(0.0, 0.0,  300.0), 
+        new THREE.Vector3(0.0, 300.0,   0.0));
+    displaySurfaces.push(rightScreen);
+
+    var floorScreen = new DisplaySurface("Floor",
+        new THREE.Vector3(-150.0, -150.0, 150.0), 
+        new THREE.Vector3(300.0, 0.0, 0.0), 
+        new THREE.Vector3(0.0, 0.0, -300.0));
+    displaySurfaces.push(floorScreen);
 	
 }
 
