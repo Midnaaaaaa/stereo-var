@@ -6,6 +6,8 @@ import{ DragControls } from 'three/addons/controls/DragControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
 
+import { VRButton } from 'three/addons/webxr/VRButton.js';
+
 // instantiate a loaders
 const gltfLoader = new GLTFLoader();
 const objLoader = new OBJLoader();
@@ -22,10 +24,6 @@ class DisplaySurface
 
 	viewMatrix(eye)
 	{
-        // var displayCenter = this.origin.clone().add(this.u.clone().multiplyScalar(0.5)).add(this.v.clone().multiplyScalar(0.5));        
-        // var uvProjection = new THREE.Vector3().addVectors(eye.clone().projectOnVector(this.u), eye.clone().projectOnVector(this.v)); // pos proyectado en u y v
-		// var target = new THREE.Vector3().addVectors(displayCenter, uvProjection); 
-        
         var target = new THREE.Vector3().crossVectors(this.v, this.u).normalize();
         target.add(eye);
 
@@ -185,6 +183,9 @@ function createRenderer()
     renderer.autoClear = false;
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
+
+    document.body.appendChild( VRButton.createButton( renderer ) );
+    renderer.xr.enabled = true;
 }
 
 function enableOrbitCamera(cam, renderer)
@@ -375,6 +376,8 @@ var animate = function () {
 	
 	// 4. render eyes
     renderer.render(eyeScene, camera);
+
+    renderer.render( scene, camera );
 	
 };
 
