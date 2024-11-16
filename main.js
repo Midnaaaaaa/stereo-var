@@ -68,9 +68,54 @@ var eyeCenter, eyeScene;
 var orbitControl;
 var showScene = true;
 
+
+function setupDragAndDrop() {
+    const dropArea = renderer.domElement;
+
+    dropArea.addEventListener('dragover', handleDragOver, false);
+    dropArea.addEventListener('drop', handleFileDrop, false);
+
+    function handleDragOver(event) {
+        event.stopPropagation();
+        event.preventDefault();
+        event.dataTransfer.dropEffect = 'copy'; // Explicitly show this is a copy.
+    }
+
+    function handleFileDrop(event) {
+        event.stopPropagation();
+        event.preventDefault();
+
+        const files = event.dataTransfer.files; // FileList object.
+
+        // Process each file
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            const filename = file.name;
+            const extension = filename.split('.').pop().toLowerCase();
+
+            if (extension === 'obj') {
+                const url = URL.createObjectURL(file);
+                addOBJObject(url); // Usar la URL temporal
+            } else if (extension === 'gltf') {
+                const reader = new FileReader();
+                reader.addEventListener('load', function (event) {
+                    const contents = event.target.result;
+                    loadGLTF(contents);
+                }, false);
+                reader.readAsArrayBuffer(file);
+            } else {
+                console.error('Unsupported file format:', extension);
+            }
+        }
+    }
+}
+
+
+
 export function addGLTFObject(path) {
     gltfLoader.load( path, function ( gltf ) {
         scene.add( gltf.scene );
+        addDragControlToObjects([gltf.scene]);
         }, undefined, function ( error ) {
         console.error( error );
         } );
@@ -81,36 +126,36 @@ export function addOBJObject(path) {
     objLoader.load(
         path,
         // called when resource is loaded
-        function ( object ) { scene.add( object ); console.log("Object Loaded"); },
+        function ( object ) { 
+            scene.add( object ); 
+            console.log("Object Loaded"); 
+            addDragControlToObjects([object]);
+        },
         // called when loading is in progresses
         function ( xhr ) { console.log( ( xhr.loaded / xhr.total * 100 ) + '% loaded' ); },
         // called when loading has errors
         function ( error ) { console.log( 'An error happened' + error); } );
 }
 
-function addDragControlToObjects()
+function addDragControlToObjects(newObjects)
 {
-    var objects = [];
-    objects.push(scene.getObjectByName("Teapot"));
-    objects.push(eyeScene.getObjectByName("Head"));
-    
-	//console.log(objects); 
-	
+    var objects = newObjects
+    	
     var controls = new DragControls( objects, camera, renderer.domElement );
     controls.addEventListener( 'hoveron', function ( event ) 
-		{
+    {
             orbitControl.enabled = false;
-        } );
+    } );
     controls.addEventListener( 'hoveroff', function ( event ) 
 	{
             orbitControl.enabled = true;
     } );
 	controls.addEventListener( 'dragstart', function ( event ) 
-		{
+    {
             event.object.material.emissive.set( 0xaaaaaa );
-        } );
+    } );
     controls.addEventListener( 'dragend', function ( event ) 
-		{
+    {
             event.object.material.emissive.set( 0x000000 );
     } );
 }
@@ -382,17 +427,41 @@ function animateVR(t, frame) {
     // 1. render scene objects
 	renderer.setClearColor(0x808080);
     renderer.clear();
-   
-    updateEyePositions();
-    
     if (!showScene)
         renderer.render(scene, camera);
 
+    updateEyePositions()
+    
+    // 2. render scene objects onto a texture, for each target
+    for (let [index, displaySurface] of displaySurfaces.entries())
+    {
+        renderer.setRenderTarget(displaySurfaceTargets[index]);
+        renderer.setClearColor(0x404040);
+        renderer.clear();
+
+		// left eye on RED channel
+        gl.colorMask(1, 0, 0, 0); 
+		var eye = getLeftEyePosition();
+		var view = displaySurface.viewMatrix(eye);
+		var proj = displaySurface.projectionMatrix(eye, 1, 10000);
+        var leftCamera = cameraFromViewProj(view, proj);
+        renderer.render(scene, leftCamera); 
+    
+		// right eye on GREEN, BLUE channels
+		gl.colorMask(0, 1, 1, 0);
+		var eye = getRightEyePosition();
+		var view = displaySurface.viewMatrix(eye);
+		var proj = displaySurface.projectionMatrix(eye, 1, 10000);
+        var rightCamera = cameraFromViewProj(view, proj);
+        renderer.clearDepth();
+        renderer.render(scene, rightCamera); 
+		
+        gl.colorMask(1, 1, 1, 0);
+    }
     // restore state
     renderer.setRenderTarget(null);
     renderer.setClearColor(0x000000);
-    
-
+  
     // 3. render display surfaces as (textured) quads
     renderer.render(displaySurfaceScene, camera);
 	
@@ -447,5 +516,6 @@ createEyeScene();	// spheres representing head + eyes
 createScene();		// some objects to test (teapot...)
 createCamera();		// a third-person camera
 enableOrbitCamera(camera, renderer);  // basic camera control
-addDragControlToObjects();	// allow some objects to be dragged
+addDragControlToObjects([scene.getObjectByName("Teapot"), eyeScene.getObjectByName("Head")]);	// allow some objects to be dragged
+setupDragAndDrop(); 
 animate();
