@@ -233,6 +233,7 @@ function handleControllers(){
     hand1.add(new OculusHandModel(hand1));
     const handPointer1 = new OculusHandPointerModel(hand1, controller1);
     hand1.add(handPointer1);
+    scene.add(hand1);
 
     const controllerGrip2 = renderer.xr.getControllerGrip(1);
     controllerGrip2.add(controllerModelFactory.createControllerModel(controllerGrip2));
@@ -242,6 +243,7 @@ function handleControllers(){
     hand2.add(new OculusHandModel(hand2));
     const handPointer2 = new OculusHandPointerModel(hand2, controller2);
     hand2.add(handPointer2);
+    scene.add(hand2);
 }
 
 
