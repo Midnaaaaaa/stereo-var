@@ -364,8 +364,16 @@ var animate = function () {
 };
 
 function updateEyePositions(){
-    var eyeL = eyeScene.getObjectByName("EyeL");
-    var eyeR = eyeScene.getObjectByName("EyeR");
+    var head = eyeScene.getObjectByName("Head");
+
+    var translation = new THREE.Vector3(),
+    rotation = new THREE.Quaternion(),
+    scale = new THREE.Vector3();
+    camera.matrixWorld.decompose(translation, rotation, scale);
+
+    head.position.set(translation.x, translation.y, translation.z);
+    head.rotation.set(rotation.x, rotation.y, rotation.z);
+    head.scale.set(scale.x, scale.y, scale.z);
 }
 
 function animateVR(t, frame) {
@@ -376,8 +384,6 @@ function animateVR(t, frame) {
     renderer.clear();
    
     updateEyePositions();
-
-    camera.position.set(100,100,100);
     
     if (!showScene)
         renderer.render(scene, camera);
