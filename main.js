@@ -447,7 +447,7 @@ var animateVR = function () {
 
     
 
-    if (showScene)
+    if (!showScene)
         renderer.render(scene, camera);
 
     // restore state
