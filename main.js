@@ -227,7 +227,6 @@ function handleControllers(){
 
     const controllerGrip1 = renderer.xr.getControllerGrip(0);
     controllerGrip1.add(controllerModelFactory.createControllerModel(controllerGrip1));
-    scene.add(controllerGrip1);
 
     const hand1 = renderer.xr.getHand(0);
     hand1.add(new OculusHandModel(hand1));
@@ -237,7 +236,6 @@ function handleControllers(){
 
     const controllerGrip2 = renderer.xr.getControllerGrip(1);
     controllerGrip2.add(controllerModelFactory.createControllerModel(controllerGrip2));
-    scene.add(controllerGrip2);
 
     const hand2 = renderer.xr.getHand(1);
     hand2.add(new OculusHandModel(hand2));
