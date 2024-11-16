@@ -7,6 +7,9 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
 
 import { VRButton } from 'three/addons/webxr/VRButton.js';
+import { XRControllerModelFactory } from 'three/addons/webxr/XRControllerModelFactory.js';
+import { OculusHandModel } from 'three/addons/webxr/OculusHandModel.js';
+import { OculusHandPointerModel } from 'three/addons/webxr/OculusHandPointerModel.js';
 
 // instantiate a loaders
 const gltfLoader = new GLTFLoader();
@@ -100,7 +103,7 @@ function setupDragAndDrop() {
                 const reader = new FileReader();
                 reader.addEventListener('load', function (event) {
                     const contents = event.target.result;
-                    loadGLTF(contents);
+                    addGLTFObject(contents);
                 }, false);
                 reader.readAsArrayBuffer(file);
             } else {
@@ -213,8 +216,38 @@ function createRenderer()
 }
 
 
+function handleControllers(){
+    const controller1 = renderer.xr.getController(0);
+    scene.add(controller1);
+
+    const controller2 = renderer.xr.getController(1);
+    scene.add(controller2);
+
+    const controllerModelFactory = new XRControllerModelFactory();
+
+    const controllerGrip1 = renderer.xr.getControllerGrip(0);
+    controllerGrip1.add(controllerModelFactory.createControllerModel(controllerGrip1));
+    scene.add(controllerGrip1);
+
+    const hand1 = renderer.xr.getHand(0);
+    hand1.add(new OculusHandModel(hand1));
+    const handPointer1 = new OculusHandPointerModel(hand1, controller1);
+    hand1.add(handPointer1);
+
+    const controllerGrip2 = renderer.xr.getControllerGrip(1);
+    controllerGrip2.add(controllerModelFactory.createControllerModel(controllerGrip2));
+    scene.add(controllerGrip2);
+
+    const hand2 = renderer.xr.getHand(1);
+    hand2.add(new OculusHandModel(hand2));
+    const handPointer2 = new OculusHandPointerModel(hand2, controller2);
+    hand2.add(handPointer2);
+}
+
+
 function init() {
-    renderer.setAnimationLoop(animateVR);    
+    renderer.setAnimationLoop(animateVR);  
+    handleControllers();  
 }
 
 function enableOrbitCamera(cam, renderer)
@@ -427,7 +460,7 @@ function animateVR(t, frame) {
     // 1. render scene objects
 	renderer.setClearColor(0x808080);
     renderer.clear();
-    if (!showScene)
+    if (showScene)
         renderer.render(scene, camera);
 
     updateEyePositions()
