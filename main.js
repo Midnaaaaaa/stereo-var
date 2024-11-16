@@ -139,7 +139,7 @@ function addDragControlToObjects()
 function createEyeScene()
 {
     var IPD = 6.8; 
-    eyeCenter = new THREE.Vector3(50, 20, 50);
+    eyeCenter = new THREE.Vector3(50, 20, 100);
     // eye positions relative to the head
     var eyeL = new THREE.Vector3( - IPD/2, 10, -6);
     var eyeR = new THREE.Vector3( + IPD/2, 10, -6);
@@ -184,9 +184,26 @@ function createRenderer()
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
 
-    document.body.appendChild( VRButton.createButton( renderer ) );
+    document.body.appendChild( VRButton.createButton( renderer )).addEventListener("click", init);
     renderer.xr.enabled = true;
 }
+
+let referenceSpace = null;
+
+async function init(){
+
+    const session = await navigator.xr.requestSession('immersive-vr', {
+        requiredFeatures: ['local', 'bounded-floor'], // Example features
+    });
+    
+    // Initialize the reference space for the session
+    referenceSpace = await session.requestReferenceSpace('local');
+    renderer.xr.setSession(session);
+    
+
+    renderer.setAnimationLoop(animateVR);
+}
+
 
 function enableOrbitCamera(cam, renderer)
 {
@@ -333,7 +350,6 @@ function cameraFromViewProj(view, proj)
 // refresh function
 var animate = function () {
     var gl = renderer.getContext();
-    renderer.setAnimationLoop(animate);
 
     // 1. render scene objects
 	renderer.setClearColor(0x808080);
@@ -376,7 +392,78 @@ var animate = function () {
 	
 	// 4. render eyes
     renderer.render(eyeScene, camera);
+
+    requestAnimationFrame(animate);
 };
+
+function updateEyePositions(){
+    var eyeL = eyeScene.getObjectByName("EyeL");
+    var eyeR = eyeScene.getObjectByName("EyeR");
+
+
+    eyeL.position.set();
+
+    eyeR.position.set()
+}
+
+var animateVR = function () {
+    var gl = renderer.getContext();
+
+    // 1. render scene objects
+	renderer.setClearColor(0x808080);
+    renderer.clear();
+   
+    const xrFrame = renderer.xr.getFrame();
+    const pose = xrFrame.getViewerPose();
+
+    updateEyePositions();
+
+    // 2. render scene objects onto a texture, for each target
+    for (let [index, displaySurface] of displaySurfaces.entries())
+    {
+        renderer.setRenderTarget(displaySurfaceTargets[index]);
+        renderer.setClearColor(0x404040);
+        renderer.clear();
+        
+        // left eye on RED channel
+        gl.colorMask(1, 0, 0, 0); 
+        var eye = getLeftEyePosition();
+        var view = displaySurface.viewMatrix(eye);
+        var proj = displaySurface.projectionMatrix(eye, 1, 10000);
+        var leftCamera = cameraFromViewProj(view, proj);
+        renderer.render(scene, leftCamera); 
+        
+        // right eye on GREEN, BLUE channels
+        gl.colorMask(0, 1, 1, 0);
+        var eye = getRightEyePosition();
+        var view = displaySurface.viewMatrix(eye);
+        var proj = displaySurface.projectionMatrix(eye, 1, 10000);
+        var rightCamera = cameraFromViewProj(view, proj);
+        renderer.clearDepth();
+        renderer.render(scene, rightCamera); 
+        
+        gl.colorMask(1, 1, 1, 0);
+    }
+
+    
+
+    if (showScene)
+        renderer.render(scene, camera);
+
+    // restore state
+    renderer.setRenderTarget(null);
+    renderer.setClearColor(0x000000);
+    
+
+    // 3. render display surfaces as (textured) quads
+    renderer.render(displaySurfaceScene, camera);
+	
+	// 4. render eyes
+    renderer.render(eyeScene, camera);
+
+    renderer.setAnimationLoop(animateVR);
+};
+
 
 
 window.addEventListener( 'keydown', function ( event ) 
