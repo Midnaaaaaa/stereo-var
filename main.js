@@ -57,27 +57,6 @@ class DisplaySurface
         let bottom = -(znear * heightBottom) / dist;
         let top = (znear * heightTop) / dist;
 
-
-
-        /*
-        var w1 = -new THREE.Vector3().addVectors(eye.clone().projectOnVector(this.u), this.u.clone().multiplyScalar(0.5)).length(); //left far
-        var w2 = this.u.length() + w1; //right far
-
-        var l1 = (this.origin.clone().add(this.u.clone().multiplyScalar(0.5)).add(this.v.clone().multiplyScalar(0.5))).length();
-
-        var h1 = -new THREE.Vector3().addVectors(eye.clone().projectOnVector(this.v), this.v.clone().multiplyScalar(0.5)).length(); //bot far
-        var h2 = this.v.length() + h1; //right far //top far
-		
-        
-        var left = (znear * w1) / l1;
-        console.log(left);
-        var right = (znear * w2) / l1;
-        console.log(right);
-        var bottom = (znear * h1) / l1;
-        console.log(bottom);
-        var top = (znear * h2) / l1;
-        console.log(top);
-        */
         return new THREE.Matrix4().makePerspective(left, right, top, bottom, znear, zfar);
     }
 }
@@ -188,22 +167,10 @@ function createRenderer()
     renderer.xr.enabled = true;
 }
 
-let referenceSpace = null;
 
-async function init(){
-
-    const session = await navigator.xr.requestSession('immersive-vr', {
-        requiredFeatures: ['local', 'bounded-floor'], // Example features
-    });
-    
-    // Initialize the reference space for the session
-    referenceSpace = await session.requestReferenceSpace('local');
-    renderer.xr.setSession(session);
-    
-
-    renderer.setAnimationLoop(animateVR);
+function init() {
+    renderer.setAnimationLoop(animateVR);    
 }
-
 
 function enableOrbitCamera(cam, renderer)
 {
@@ -399,54 +366,19 @@ var animate = function () {
 function updateEyePositions(){
     var eyeL = eyeScene.getObjectByName("EyeL");
     var eyeR = eyeScene.getObjectByName("EyeR");
-
-
-    eyeL.position.set();
-
-    eyeR.position.set()
 }
 
-var animateVR = function () {
+function animateVR(t, frame) {
     var gl = renderer.getContext();
 
     // 1. render scene objects
 	renderer.setClearColor(0x808080);
     renderer.clear();
    
-    const xrFrame = renderer.xr.getFrame();
-    const pose = xrFrame.getViewerPose();
-
     updateEyePositions();
 
-    // 2. render scene objects onto a texture, for each target
-    for (let [index, displaySurface] of displaySurfaces.entries())
-    {
-        renderer.setRenderTarget(displaySurfaceTargets[index]);
-        renderer.setClearColor(0x404040);
-        renderer.clear();
-        
-        // left eye on RED channel
-        gl.colorMask(1, 0, 0, 0); 
-        var eye = getLeftEyePosition();
-        var view = displaySurface.viewMatrix(eye);
-        var proj = displaySurface.projectionMatrix(eye, 1, 10000);
-        var leftCamera = cameraFromViewProj(view, proj);
-        renderer.render(scene, leftCamera); 
-        
-        // right eye on GREEN, BLUE channels
-        gl.colorMask(0, 1, 1, 0);
-        var eye = getRightEyePosition();
-        var view = displaySurface.viewMatrix(eye);
-        var proj = displaySurface.projectionMatrix(eye, 1, 10000);
-        var rightCamera = cameraFromViewProj(view, proj);
-        renderer.clearDepth();
-        renderer.render(scene, rightCamera); 
-        
-        gl.colorMask(1, 1, 1, 0);
-    }
-
+    camera.position.set(100,100,100);
     
-
     if (!showScene)
         renderer.render(scene, camera);
 
