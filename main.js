@@ -158,7 +158,9 @@ export function addOBJObject(path) {
                         geometries.push(children.geometry);
                     }
                     let mergedGeometry = BufferGeometryUtils.mergeBufferGeometries(geometries);
-                    let material = new THREE.MeshPhongMaterial( { color: 0xaaaaaa } );
+
+                    let n = (Math.random() * 0xfffff * 1000000).toString(16);
+                    let material = new THREE.MeshPhongMaterial( { color: '#' + n.slice(0, 6) } );
                     finalObject = new THREE.Mesh( mergedGeometry, material );
                 }
                 else {
@@ -553,7 +555,7 @@ function animateVR(t, frame) {
                     gl.colorMask(0, 1, 1, 0);
                 }
 
-                renderer.render(scene, eyeCamera);
+                renderer.render(scene, eyeCamera, displaySurfaceTargets[index], true);
                 renderer.clearDepth();
             }
 
