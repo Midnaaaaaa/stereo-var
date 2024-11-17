@@ -149,19 +149,32 @@ export function addOBJObject(path) {
         function (object) { 
             console.log("Object Loaded");
 
-            let finalObject
-            if (object.type == "Group") {
-                let geometries = [];
-                for (const children of object.children) {
-                    geometries.push(children.geometry);
+            let finalObject;
+            
+            try{
+                if (object.type == "Group") {
+                    let geometries = [];
+                    for (const children of object.children) {
+                        geometries.push(children.geometry);
+                    }
+                    let mergedGeometry = BufferGeometryUtils.mergeBufferGeometries(geometries);
+                    let material = new THREE.MeshPhongMaterial( { color: 0xaaaaaa } );
+                    finalObject = new THREE.Mesh( mergedGeometry, material );
                 }
-                let mergedGeometry = BufferGeometryUtils.mergeBufferGeometries(geometries);
-                let material = new THREE.MeshPhongMaterial( { color: 0xaaaaaa } );
-                finalObject = new THREE.Mesh( mergedGeometry, material );
+                else {
+                    finalObject = object;
+                }
+                finalObject.geometry.computeBoundingBox();
+                var boundingBox = finalObject.geometry.boundingBox;
+    
+                var size = boundingBox.max.clone().sub(boundingBox.min);
+                finalObject.geometry.scale(70/size.x, 70/size.x, 70/size.x);
+                
             }
-            else {
+            catch{
                 finalObject = object;
             }
+
             scene.add(finalObject);
             addDragControlToObjects([finalObject]);
         },
@@ -289,8 +302,8 @@ function handleControllers(){
 
 
 function init() {
-    renderer.setAnimationLoop(animateVR);  
     handleControllers();  
+    renderer.setAnimationLoop(animateVR);  
 }
 
 function enableOrbitCamera(cam, renderer)
