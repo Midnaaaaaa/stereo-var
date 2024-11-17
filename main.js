@@ -455,51 +455,63 @@ function updateEyePositions(){
 }
 
 function animateVR(t, frame) {
-    var gl = renderer.getContext();
 
-    // 1. render scene objects
-	renderer.setClearColor(0x808080);
-    renderer.clear();
-    if (showScene)
-        renderer.render(scene, camera);
-
-    updateEyePositions()
-    
-    // 2. render scene objects onto a texture, for each target
-    for (let [index, displaySurface] of displaySurfaces.entries())
-    {
-        renderer.setRenderTarget(displaySurfaceTargets[index]);
-        renderer.setClearColor(0x404040);
-        renderer.clear();
-
-		// left eye on RED channel
-        gl.colorMask(1, 0, 0, 0); 
-		var eye = getLeftEyePosition();
-		var view = displaySurface.viewMatrix(eye);
-		var proj = displaySurface.projectionMatrix(eye, 1, 10000);
-        var leftCamera = cameraFromViewProj(view, proj);
-        renderer.render(scene, leftCamera); 
-    
-		// right eye on GREEN, BLUE channels
-		gl.colorMask(0, 1, 1, 0);
-		var eye = getRightEyePosition();
-		var view = displaySurface.viewMatrix(eye);
-		var proj = displaySurface.projectionMatrix(eye, 1, 10000);
-        var rightCamera = cameraFromViewProj(view, proj);
-        renderer.clearDepth();
-        renderer.render(scene, rightCamera); 
-		
-        gl.colorMask(1, 1, 1, 0);
+    if (!frame) {
+        // If frame is undefined, request another frame
+        const session = renderer.xr.getSession();
+        if (session) {
+            session.requestAnimationFrame(animateVR);
+        }
+        return;
     }
-    // restore state
-    renderer.setRenderTarget(null);
-    renderer.setClearColor(0x000000);
-  
-    // 3. render display surfaces as (textured) quads
-    renderer.render(displaySurfaceScene, camera);
-	
-	// 4. render eyes
-    renderer.render(eyeScene, camera);
+
+    var gl = renderer.getContext();
+    var referenceSpace = renderer.xr.getReferenceSpace();
+    var pose = frame.getViewerPose(referenceSpace);
+
+    if (pose) {
+        // 1. render scene objects
+        renderer.setClearColor(0x808080);
+        renderer.clear();
+        if (showScene) renderer.render(scene, camera);
+
+        updateEyePositions();
+
+        for (let [index, displaySurface] of displaySurfaces.entries()) {
+            renderer.setRenderTarget(displaySurfaceTargets[index]);
+            renderer.setClearColor(0x404040);
+            renderer.clear();
+
+            for (const view of pose.views) {
+                const eye = view.eye === 'left' ? getLeftEyePosition() : getRightEyePosition();
+                const viewMatrix = displaySurface.viewMatrix(eye);
+                const projectionMatrix = displaySurface.projectionMatrix(eye, 1, 10000);
+
+                // Calculate the cameras from view and projection matrices
+                const eyeCamera = cameraFromViewProj(viewMatrix, projectionMatrix);
+
+                // left eye on RED channel
+                if (view.eye === 'left') {
+                    gl.colorMask(1, 0, 0, 0);
+                } else {
+                    gl.colorMask(0, 1, 1, 0);
+                }
+
+                renderer.render(scene, eyeCamera);
+                renderer.clearDepth();
+            }
+
+            gl.colorMask(1, 1, 1, 0);
+        }
+        renderer.setRenderTarget(null);
+        renderer.setClearColor(0x000000);
+
+        // 3. render display surfaces as (textured) quads
+        renderer.render(displaySurfaceScene, camera);
+
+        // 4. render eyes
+        renderer.render(eyeScene, camera);
+    }
 
     renderer.setAnimationLoop(animateVR);
 };
