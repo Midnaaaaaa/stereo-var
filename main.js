@@ -5,15 +5,18 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import{ DragControls } from 'three/addons/controls/DragControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
+import { MTLLoader } from 'three/addons/loaders/MTLLoader.js'; 
 
 import { VRButton } from 'three/addons/webxr/VRButton.js';
 import { XRControllerModelFactory } from 'three/addons/webxr/XRControllerModelFactory.js';
 import { OculusHandModel } from 'three/addons/webxr/OculusHandModel.js';
 import { OculusHandPointerModel } from 'three/addons/webxr/OculusHandPointerModel.js';
 
+
 // instantiate a loaders
 const gltfLoader = new GLTFLoader();
 const objLoader = new OBJLoader();
+const mtlLoader = new MTLLoader(); 
 
 class DisplaySurface 
 {
@@ -71,6 +74,7 @@ var eyeCenter, eyeScene;
 var orbitControl;
 var showScene = true;
 
+let materialToApply = null;
 
 function setupDragAndDrop() {
     const dropArea = renderer.domElement;
@@ -98,7 +102,7 @@ function setupDragAndDrop() {
 
             if (extension === 'obj') {
                 const url = URL.createObjectURL(file);
-                addOBJObject(url); // Usar la URL temporal
+                addOBJObject(url); // Use the temporary URL
             } else if (extension === 'gltf') {
                 const reader = new FileReader();
                 reader.addEventListener('load', function (event) {
@@ -106,6 +110,12 @@ function setupDragAndDrop() {
                     addGLTFObject(contents);
                 }, false);
                 reader.readAsArrayBuffer(file);
+            } else if (extension === 'mtl') {
+                const url = URL.createObjectURL(file);
+                mtlLoader.load(url, (materials) => {
+                    materials.preload();
+                    materialToApply = materials;
+                });
             } else {
                 console.error('Unsupported file format:', extension);
             }
@@ -113,32 +123,38 @@ function setupDragAndDrop() {
     }
 }
 
-
-
 export function addGLTFObject(path) {
-    gltfLoader.load( path, function ( gltf ) {
-        scene.add( gltf.scene );
+    gltfLoader.load(path, function (gltf) {
+        if (materialToApply) {
+            gltf.scene.traverse(function (child) {
+                if (child.isMesh) {
+                    child.material = materialToApply;
+                }
+            });
+        }
+        scene.add(gltf.scene);
         addDragControlToObjects([gltf.scene]);
-        }, undefined, function ( error ) {
-        console.error( error );
-        } );
+    }, undefined, function (error) {
+        console.error(error);
+    });
 }
 
 export function addOBJObject(path) {
-    // load a resource
+    if (materialToApply) {
+        objLoader.setMaterials(materialToApply);
+    }
     objLoader.load(
         path,
-        // called when resource is loaded
-        function ( object ) { 
-            scene.add( object ); 
-            console.log("Object Loaded"); 
+        function (object) { 
+            scene.add(object);
+            console.log("Object Loaded");
             addDragControlToObjects([object]);
         },
-        // called when loading is in progresses
-        function ( xhr ) { console.log( ( xhr.loaded / xhr.total * 100 ) + '% loaded' ); },
-        // called when loading has errors
-        function ( error ) { console.log( 'An error happened' + error); } );
+        function (xhr) { console.log((xhr.loaded / xhr.total * 100) + '% loaded'); },
+        function (error) { console.log('An error happened: ' + error); }
+    );
 }
+
 
 function addDragControlToObjects(newObjects)
 {

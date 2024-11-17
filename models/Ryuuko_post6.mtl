@@ -1,0 +1,63 @@
+# File produced by Open Asset Import Library (http://www.assimp.sf.net)
+# (assimp v5.4.0)
+
+newmtl RyuukoBrow
+Kd 0 0 0
+Ke 1 1 1
+d 1
+illum 1
+
+newmtl RyuukoIris
+Kd 0 0 0
+Ke 1 1 1
+d 1
+illum 1
+
+newmtl RyuukoSclera
+Kd 1 1 1
+Ke 0 0 0
+d 1
+illum 1
+
+newmtl CommonAnimeTongue
+Kd 0 0 0
+Ke 1 1 1
+d 1
+illum 1
+
+newmtl RyuukoShoes
+Kd 0 0 0
+Ke 1 1 1
+d 1
+illum 1
+
+newmtl RyuukoLash
+Kd 0 0 0
+Ke 1 1 1
+d 1
+illum 1
+
+newmtl CommonAnimeMouth
+Kd 0 0 0
+Ke 1 1 1
+d 1
+illum 1
+
+newmtl RyuuokoHair
+Kd 0 0 0
+Ke 1 1 1
+d 1
+illum 1
+
+newmtl RyuukoClothing
+Kd 0 0 0
+Ke 1 1 1
+d 1
+illum 1
+
+newmtl avatarBodyLib.001
+Kd 0 0 0
+Ke 1 1 1
+d 1
+illum 1
+
