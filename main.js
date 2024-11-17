@@ -6,6 +6,7 @@ import{ DragControls } from 'three/addons/controls/DragControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
 import { MTLLoader } from 'three/addons/loaders/MTLLoader.js'; 
+import * as BufferGeometryUtils from 'three/addons/utils/BufferGeometryUtils.js';
 
 import { VRButton } from 'three/addons/webxr/VRButton.js';
 import { XRControllerModelFactory } from 'three/addons/webxr/XRControllerModelFactory.js';
@@ -146,37 +147,63 @@ export function addOBJObject(path) {
     objLoader.load(
         path,
         function (object) { 
-            scene.add(object);
             console.log("Object Loaded");
-            addDragControlToObjects([object]);
+
+            let finalObject
+            if (object.type == "Group") {
+                let geometries = [];
+                for (const children of object.children) {
+                    geometries.push(children.geometry);
+                }
+                let mergedGeometry = BufferGeometryUtils.mergeBufferGeometries(geometries);
+                let material = new THREE.MeshPhongMaterial( { color: 0xaaaaaa } );
+                finalObject = new THREE.Mesh( mergedGeometry, material );
+            }
+            else {
+                finalObject = object;
+            }
+            scene.add(finalObject);
+            addDragControlToObjects([finalObject]);
         },
         function (xhr) { console.log((xhr.loaded / xhr.total * 100) + '% loaded'); },
         function (error) { console.log('An error happened: ' + error); }
     );
 }
 
-
+let controls = null;
+let draggableObjects = [];
 function addDragControlToObjects(newObjects)
 {
-    var objects = newObjects
-    	
-    var controls = new DragControls( objects, camera, renderer.domElement );
-    controls.addEventListener( 'hoveron', function ( event ) 
-    {
-            orbitControl.enabled = false;
-    } );
-    controls.addEventListener( 'hoveroff', function ( event ) 
-	{
-            orbitControl.enabled = true;
-    } );
-	controls.addEventListener( 'dragstart', function ( event ) 
-    {
-            event.object.material.emissive.set( 0xaaaaaa );
-    } );
-    controls.addEventListener( 'dragend', function ( event ) 
-    {
-            event.object.material.emissive.set( 0x000000 );
-    } );
+    draggableObjects.push(...newObjects)
+    if (controls == null) {
+        controls = new DragControls(draggableObjects, camera, renderer.domElement );
+        //controls.recursive = false;
+        //controls.transformGroup = true;
+        controls.addEventListener( 'dragstart', function ( event ) 
+        {
+                orbitControl.enabled = false;
+                if (event.object.type == "Group") {
+                    for (const mesh of event.object.children) {
+                        mesh.material.emissive.set( 0xaaaaaa );
+                    }
+                }
+                else {
+                    event.object.material.emissive.set( 0xaaaaaa );
+                }
+        } );
+        controls.addEventListener( 'dragend', function ( event ) 
+        {
+                orbitControl.enabled = true;
+                if (event.object.type == "Group") {
+                    for (const mesh of event.object.children) {
+                        mesh.material.emissive.set( 0x000000 );
+                    }
+                }
+                else {
+                    event.object.material.emissive.set( 0x000000 );
+                }
+        } );
+    }
 }
 
 function createEyeScene()
