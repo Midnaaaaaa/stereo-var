@@ -59,10 +59,10 @@ class DisplaySurface
         let c = midLeft.clone().projectOnVector(this.u).length();
         let dist = Math.sqrt(hip*hip-c*c);
 
-        let left = -(znear * widthLeft) / dist;
-        let right = (znear * widthRight) / dist;
-        let bottom = -(znear * heightBottom) / dist;
-        let top = (znear * heightTop) / dist;
+        left = -(znear * widthLeft) / dist;
+        right = (znear * widthRight) / dist;
+        bottom = -(znear * heightBottom) / dist;
+        top = (znear * heightTop) / dist;
 
         return new THREE.Matrix4().makePerspective(left, right, top, bottom, znear, zfar);
     }
@@ -74,6 +74,16 @@ var displaySurfaces, displaySurfaceScene, displaySurfaceTargets;
 var eyeCenter, eyeScene; 
 var orbitControl;
 var showScene = true;
+var showFrustum = false;
+
+var defaultId = 0;
+
+var left, right, bottom, top;
+
+var frustumsL = []
+var frustumsR = []
+
+var frustumScene;
 
 let materialToApply = null;
 
@@ -176,7 +186,18 @@ export function addOBJObject(path) {
             catch{
                 finalObject = object;
             }
+            
+            const regex = /([^/]+)(?=\.[^/]+$)/;
 
+            const match = path.match(regex);
+            let id;
+            if (match) {
+                id = match[0]; 
+            } else {
+                id = defaultId;
+                ++defaultId;
+            }
+            finalObject.name = id;
             scene.add(finalObject);
             addDragControlToObjects([finalObject]);
         },
@@ -334,7 +355,8 @@ function createScene()
     teapot.name = "Teapot";
     teapot.position.z-=70;
     scene.add( teapot );
-                
+
+    addOBJObject("models/penguin.obj");                
     createLights(scene);
 }
 
@@ -450,10 +472,64 @@ function cameraFromViewProj(view, proj)
 	return cam;
 }
 
+
+function updateFrustumGeometry(displaySurface, eye, col, znear){
+    let normalizedU = displaySurface.u.clone().normalize()
+    let normalizedV = displaySurface.v.clone().normalize()
+
+
+    const points = [
+        displaySurface.origin,                                                                                          // Point 0 - Bottom far left
+
+        displaySurface.origin.clone().add(displaySurface.u),                                                            // Point 1 - Bottom far right
+        
+        eye.clone().add(normalizedU.clone().multiplyScalar(left).add(normalizedV.clone().multiplyScalar(bottom))),      // Point 2 - Bottom near left
+
+        eye.clone().add(normalizedU.clone().multiplyScalar(right).add(normalizedV.clone().multiplyScalar(bottom))),     // Point 3 - Bottom near right
+
+        displaySurface.origin.clone().add(displaySurface.v),                                                            // Point 4 - Top far left
+
+        displaySurface.origin.clone().add(displaySurface.u).add(displaySurface.v),                                      // Point 5 - Top far right
+
+        eye.clone().add(normalizedU.clone().multiplyScalar(left).add(normalizedV.clone().multiplyScalar(top))),         // Point 6 - Top near left
+
+        eye.clone().add(normalizedU.clone().multiplyScalar(right).add(normalizedV.clone().multiplyScalar(top))),        // Point 7 - Top near right
+    ];
+    
+    // Define the edges of the frustum as pairs of points
+    const edges = [
+        // Bottom base (connect points 1-2, 2-3, 3-4, 4-1)
+        [0, 1], [0, 2], [2, 3], [3, 1],
+        // Top base (connect points 5-6, 6-7, 7-8, 8-5)
+        [4, 5], [4, 6], [6, 7], [7, 5],
+        // Vertical edges (connect top to bottom)
+        [0, 4], [1, 5], [2, 6], [3, 7]
+    ];
+    
+    const geometry = new THREE.BufferGeometry();
+    const positions = [];
+    edges.forEach(([startIdx, endIdx]) => {
+        const startPoint = points[startIdx];
+        const endPoint = points[endIdx];
+        
+        positions.push(startPoint.x, startPoint.y, startPoint.z);
+        positions.push(endPoint.x, endPoint.y, endPoint.z);
+    });
+    
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    const material = new THREE.LineBasicMaterial({ color: col });
+
+    return new THREE.LineSegments(geometry, material);
+}
+
 // refresh function
 var animate = function () {
     var gl = renderer.getContext();
 
+    frustumScene = new THREE.Scene()
+
+    let znear = 20
+    let zfar = 1000
     // 1. render scene objects
 	renderer.setClearColor(0x808080);
     renderer.clear();
@@ -471,20 +547,27 @@ var animate = function () {
         gl.colorMask(1, 0, 0, 0); 
 		var eye = getLeftEyePosition();
 		var view = displaySurface.viewMatrix(eye);
-		var proj = displaySurface.projectionMatrix(eye, 1, 10000);
+		var proj = displaySurface.projectionMatrix(eye, znear, zfar);
         var leftCamera = cameraFromViewProj(view, proj);
         renderer.render(scene, leftCamera); 
+
+        frustumsL[index] = updateFrustumGeometry(displaySurface, eye, 0x0ff0000, znear);
     
 		// right eye on GREEN, BLUE channels
 		gl.colorMask(0, 1, 1, 0);
 		var eye = getRightEyePosition();
 		var view = displaySurface.viewMatrix(eye);
-		var proj = displaySurface.projectionMatrix(eye, 1, 10000);
+		var proj = displaySurface.projectionMatrix(eye, znear, zfar);
         var rightCamera = cameraFromViewProj(view, proj);
         renderer.clearDepth();
         renderer.render(scene, rightCamera); 
 		
         gl.colorMask(1, 1, 1, 0);
+
+        frustumsR[index] = updateFrustumGeometry(displaySurface, eye, 0x00ffff, znear);
+
+        frustumScene.add(frustumsR[index])
+        frustumScene.add(frustumsL[index])
     }
     // restore state
     renderer.setRenderTarget(null);
@@ -495,6 +578,8 @@ var animate = function () {
 	
 	// 4. render eyes
     renderer.render(eyeScene, camera);
+
+    if(showFrustum) renderer.render(frustumScene, camera);
 
     requestAnimationFrame(animate);
 };
@@ -569,6 +654,8 @@ function animateVR(t, frame) {
 
         // 4. render eyes
         renderer.render(eyeScene, camera);
+
+        if(showFrustum) renderer.render(frustumScene, camera);
     }
 
     renderer.setAnimationLoop(animateVR);
@@ -592,6 +679,10 @@ window.addEventListener( 'keydown', function ( event )
             case 'KeyS':
                 showScene = !showScene;
                 break;
+
+            case 'KeyF':
+                showFrustum = !showFrustum;
+                break;
 				
 			case 'KeyT':
 				var viewF = displaySurfaces[0].viewMatrix(new THREE.Vector3(50,20,100));
@@ -604,10 +695,21 @@ window.addEventListener( 'keydown', function ( event )
 				//console.log(viewR);
 				//console.log(viewB);
 				break;
-                
-                    
 }
 });
+
+
+function initializeFrustums(){
+    frustumScene = new THREE.Scene();
+    for(let i = 0; i < 4; i++){
+        frustumsL.push(new THREE.Mesh())
+        frustumScene.add(frustumsL[i]);
+    }
+    for(let i = 0; i < 4; i++){
+        frustumsR.push(new THREE.Mesh())
+        frustumScene.add(frustumsR[i]);
+    }
+}
 
 
 
@@ -621,4 +723,5 @@ createCamera();		// a third-person camera
 enableOrbitCamera(camera, renderer);  // basic camera control
 addDragControlToObjects([scene.getObjectByName("Teapot"), eyeScene.getObjectByName("Head")]);	// allow some objects to be dragged
 setupDragAndDrop(); 
+initializeFrustums();
 animate();
