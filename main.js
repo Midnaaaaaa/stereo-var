@@ -150,7 +150,7 @@ export function addGLTFObject(path) {
     });
 }
 
-export function addOBJObject(path) {
+export function addOBJObject(path, position = new THREE.Vector3(0,0,0)) {
     if (materialToApply) {
         objLoader.setMaterials(materialToApply);
     }
@@ -198,6 +198,7 @@ export function addOBJObject(path) {
                 ++defaultId;
             }
             finalObject.name = id;
+            finalObject.position.set(position.x, position.y, position.z);
             scene.add(finalObject);
             addDragControlToObjects([finalObject]);
         },
@@ -356,7 +357,8 @@ function createScene()
     teapot.position.z-=70;
     scene.add( teapot );
 
-    addOBJObject("models/penguin.obj");                
+    addOBJObject("models/penguin.obj", new THREE.Vector3(0,-150,-100));
+
     createLights(scene);
 }
 
@@ -474,9 +476,8 @@ function cameraFromViewProj(view, proj)
 
 
 function updateFrustumGeometry(displaySurface, eye, col, znear){
-    let normalizedU = displaySurface.u.clone().normalize();
-    let normalizedV = displaySurface.v.clone().normalize();
-    let fwrd = new THREE.Vector3().crossVectors(normalizedV, normalizedU).multiplyScalar(znear);
+    let normalizedU = displaySurface.u.clone().normalize()
+    let normalizedV = displaySurface.v.clone().normalize()
 
 
     const points = [
@@ -484,17 +485,17 @@ function updateFrustumGeometry(displaySurface, eye, col, znear){
 
         displaySurface.origin.clone().add(displaySurface.u),                                                            // Point 1 - Bottom far right
         
-        eye.clone().add(fwrd).add(normalizedU.clone().multiplyScalar(left).add(normalizedV.clone().multiplyScalar(bottom))),      // Point 2 - Bottom near left
+        eye.clone().add(normalizedU.clone().multiplyScalar(left).add(normalizedV.clone().multiplyScalar(bottom))),      // Point 2 - Bottom near left
 
-        eye.clone().add(fwrd).add(normalizedU.clone().multiplyScalar(right).add(normalizedV.clone().multiplyScalar(bottom))),     // Point 3 - Bottom near right
+        eye.clone().add(normalizedU.clone().multiplyScalar(right).add(normalizedV.clone().multiplyScalar(bottom))),     // Point 3 - Bottom near right
 
         displaySurface.origin.clone().add(displaySurface.v),                                                            // Point 4 - Top far left
 
         displaySurface.origin.clone().add(displaySurface.u).add(displaySurface.v),                                      // Point 5 - Top far right
 
-        eye.clone().add(fwrd).add(normalizedU.clone().multiplyScalar(left).add(normalizedV.clone().multiplyScalar(top))),         // Point 6 - Top near left
+        eye.clone().add(normalizedU.clone().multiplyScalar(left).add(normalizedV.clone().multiplyScalar(top))),         // Point 6 - Top near left
 
-        eye.clone().add(fwrd).add(normalizedU.clone().multiplyScalar(right).add(normalizedV.clone().multiplyScalar(top))),        // Point 7 - Top near right
+        eye.clone().add(normalizedU.clone().multiplyScalar(right).add(normalizedV.clone().multiplyScalar(top))),        // Point 7 - Top near right
     ];
     
     // Define the edges of the frustum as pairs of points
@@ -523,7 +524,6 @@ function updateFrustumGeometry(displaySurface, eye, col, znear){
     return new THREE.LineSegments(geometry, material);
 }
 
-let frustumEnabled = [true, false, false, false]
 // refresh function
 var animate = function () {
     var gl = renderer.getContext();
@@ -568,10 +568,8 @@ var animate = function () {
 
         frustumsR[index] = updateFrustumGeometry(displaySurface, eye, 0x00ffff, znear);
 
-        if (frustumEnabled[index]) {
-            frustumScene.add(frustumsR[index])
-            frustumScene.add(frustumsL[index])
-        }
+        frustumScene.add(frustumsR[index])
+        frustumScene.add(frustumsL[index])
     }
     // restore state
     renderer.setRenderTarget(null);
@@ -665,58 +663,39 @@ function animateVR(t, frame) {
     renderer.setAnimationLoop(animateVR);
 };
 
-
-
 window.addEventListener( 'keydown', function ( event ) 
 {
-    console.log(event.code );
-    switch ( event.code ) {
-        case 'KeyL': 
-            var eye = getLeftEyePosition();
-            camera.position.set(eye.x, eye.y, eye.z); 
-            break;
-            
-        case 'KeyR': 
-            var eye = getRightEyePosition();
-            camera.position.set(eye.x, eye.y, eye.z); 
-            break;
-            
-        case 'KeyS':
-            showScene = !showScene;
-            break;
+        switch ( event.code ) {
+            case 'KeyL': 
+                var eye = getLeftEyePosition();
+                camera.position.set(eye.x, eye.y, eye.z); 
+                break;
+                
+            case 'KeyR': 
+                var eye = getRightEyePosition();
+                camera.position.set(eye.x, eye.y, eye.z); 
+                break;
+                
+            case 'KeyS':
+                showScene = !showScene;
+                break;
 
-        case 'KeyF':
-            showFrustum = !showFrustum;
-            break;
-            
-        case 'KeyT':
-            var viewF = displaySurfaces[0].viewMatrix(new THREE.Vector3(50,20,100));
-            var viewL = displaySurfaces[1].viewMatrix(new THREE.Vector3(50,20,100));
-            //var viewR = displaySurfaces[2].viewMatrix(new THREE.Vector3(50,20,100));
-            //var viewB = displaySurfaces[3].viewMatrix(new THREE.Vector3(50,20,100));
-            console.log("View matrices:");
-            console.log(viewF);
-            console.log(viewL);
-            //console.log(viewR);
-            //console.log(viewB);
-            break;
-
-        case 'Digit1':
-            frustumEnabled[0] = !frustumEnabled[0];
-            break;
-
-        case 'Digit2':
-            frustumEnabled[1] = !frustumEnabled[1];
-            break;
-
-        case 'Digit3':
-            frustumEnabled[2] = !frustumEnabled[2];
-            break;
-
-        case 'Digit4':
-            frustumEnabled[3] = !frustumEnabled[3];
-            break;
-    }
+            case 'KeyF':
+                showFrustum = !showFrustum;
+                break;
+				
+			case 'KeyT':
+				var viewF = displaySurfaces[0].viewMatrix(new THREE.Vector3(50,20,100));
+				var viewL = displaySurfaces[1].viewMatrix(new THREE.Vector3(50,20,100));
+				//var viewR = displaySurfaces[2].viewMatrix(new THREE.Vector3(50,20,100));
+				//var viewB = displaySurfaces[3].viewMatrix(new THREE.Vector3(50,20,100));
+				console.log("View matrices:");
+				console.log(viewF);
+				console.log(viewL);
+				//console.log(viewR);
+				//console.log(viewB);
+				break;
+}
 });
 
 

@@ -12,3 +12,4 @@ Added features:
 - Improved drag controls
 - WebXR integration but only the objects are rendered 😦
 - Implemented hand tracking
+- Imported models are normalized to always measure the same in the x-axis (to prevent importing very small models)
