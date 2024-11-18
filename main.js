@@ -524,8 +524,17 @@ function updateFrustumGeometry(displaySurface, eye, col, znear){
     return new THREE.LineSegments(geometry, material);
 }
 
+
+function rotatePenguin(penguin, deltaTime){
+    penguin.rotation.y += 0.5 * deltaTime;
+}
+
+let previousTime = 0;
 // refresh function
-var animate = function () {
+var animate = function (currentTime) {
+    const deltaTime = (currentTime - previousTime) / 1000; // Convert to seconds
+    previousTime = currentTime;
+
     var gl = renderer.getContext();
 
     frustumScene = new THREE.Scene()
@@ -584,6 +593,9 @@ var animate = function () {
     if(showFrustum) renderer.render(frustumScene, camera);
 
     requestAnimationFrame(animate);
+
+    let p = scene.getObjectByName("penguin")
+    if(p != undefined) rotatePenguin(p, deltaTime);
 };
 
 function updateEyePositions(){
